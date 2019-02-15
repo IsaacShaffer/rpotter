@@ -31,10 +31,6 @@ import time
 import pigpio
 import warnings
 #
-# https://www.pyimagesearch.com/2015/03/30/accessing-the-raspberry-pi-camera-with-opencv-and-python/
-cv2.imshow("tits",image)
-cv2.waitKey(0)
-#
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 GPIOS=32
 MODES=["INPUT", "OUTPUT", "ALT5", "ALT4", "ALT0", "ALT1", "ALT2", "ALT3"]
@@ -67,10 +63,10 @@ pi.write(incendio_pin,0)
 pi.write(switch_pin,1)
 # start capturing
 cv2.namedWindow("Raspberry Potter")
-cam = cv2.VideoCapture(-1)
-cam.set(3, 640)
-cam.set(4, 480)
-
+cam = PiCamera()
+cam.resolution = (640, 480)
+cam.framerate = 32
+rawCapture = PiRGBArray(cam, size=(640, 480))
 
 def Spell(spell):    
     #clear all checks
@@ -132,7 +128,8 @@ def IsGesture(a,b,c,d,i):
 def FindWand():
     global rval,old_frame,old_gray,p0,mask,color,ig,img,frame
     try:
-        rval, old_frame = cam.read()
+        cam.capture(rawCapture, format="bgr")
+        old_frame = rawCapture.array
         cv2.flip(old_frame,1,old_frame)
         old_gray = cv2.cvtColor(old_frame,cv2.COLOR_BGR2GRAY)
         equalizeHist(old_gray)
@@ -149,7 +146,7 @@ def FindWand():
             mask = np.zeros_like(old_frame)
             ig = [[0] for x in range(20)]
         print("finding...")
-        threading.Timer(3, FindWand).start()
+        threading.Timer(3, FindWand).start() 
     except:
         e = sys.exc_info()[1]
         print("Error: %s" % e)
@@ -159,7 +156,8 @@ def TrackWand():
     global rval,old_frame,old_gray,p0,mask,color,ig,img,frame
     try:
         color = (0,0,255)
-        rval, old_frame = cam.read()
+        cam.capture(rawCapture, format="bgr")
+        old_frame = rawCapture.array
         cv2.flip(old_frame,1,old_frame)
         old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
         equalizeHist(old_gray)
@@ -182,7 +180,7 @@ def TrackWand():
         
     while True:
         try: 
-            rval, frame = cam.read()
+            frame = rawCapture.array
             cv2.flip(frame,1,frame)
             if p0 is not None:
                 frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -218,7 +216,7 @@ def TrackWand():
                 cv2.imshow("Raspberry Potter", frame)
                 print("refresh")
                 # get next frame
-                rval, frame = cam.read()
+                frame = rawCapture.array
 
                 # Now update the previous frame and previous points
                 old_gray = frame_gray.copy()
